@@ -1,9 +1,9 @@
 {
-    "version": 2,
-    "public": "public",
-    "builds": [
-      { "src": "pages/**/*.js", "use": "@vercel/node" },
-      { "src": "public/**/*", "use": "@vercel/static" }
-    ]
-  }
-  
+  "version": 2,
+  "builds": [
+    { "src": "pages/**/*.js", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/" }
+  ]
+}
