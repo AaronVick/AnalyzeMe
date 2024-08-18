@@ -1,155 +1,124 @@
-import axios from 'axios';
-import { Frog } from 'frog';
-import { neynar } from 'frog/hubs';
-import { ImageResponse } from '@vercel/og'; // For generating images
-import Head from 'next/head';
+import { Frog } from 'frog'
+import axios from 'axios'
+
+export const config = {
+  runtime: 'edge',
+}
 
 const stopwords = [
   'the', 'is', 'in', 'and', 'to', 'a', 'of', 'that', 'it', 'on', 'with', 'as', 'for', 'this', 'was', 'are', 'by', 'an', 'be', 'at', 'from',
-];
-
-const app = new Frog({
-  hub: neynar({ apiKey: 'NEYNAR_FROG_FM' }),
-  title: 'Analyze Me Frame',
-  verify: 'silent',
-});
+]
 
 function getRandomDarkColor() {
-  const hue = Math.floor(Math.random() * 360);
-  const saturation = 50 + Math.random() * 30; // 50-80%
-  const lightness = 15 + Math.random() * 20; // 15-35%
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const hue = Math.floor(Math.random() * 360)
+  const saturation = 50 + Math.random() * 30 // 50-80%
+  const lightness = 15 + Math.random() * 20 // 15-35%
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
-function getWordSize(count) {
-  return 20 + count * 2; // Adjust this multiplier based on the desired size range
+function getWordSize(count, maxCount) {
+  const minSize = 20
+  const maxSize = 60
+  return minSize + (count / maxCount) * (maxSize - minSize)
 }
 
-function generateWordCloud(wordsArray) {
-  return wordsArray.map(({ word, count }) => (
-    <div
-      key={word}
-      style={{
-        fontSize: `${getWordSize(count)}px`,
-        color: getRandomDarkColor(),
-        margin: '5px',
-      }}
-    >
-      {word}
-    </div>
-  ));
-}
-
-async function generateImageResponse(content) {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          backgroundColor: 'black',
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          padding: '20px',
-        }}
-      >
-        {content}
-      </div>
-    ),
-    {
-      width: 1200,
-      height: 630,
-    }
-  );
-}
+const app = new Frog({
+  basePath: '/api',
+})
 
 app.frame('/analyzeMe', async (c) => {
-  const { frameData } = c;
-  const { fid } = frameData;
+  const { frameData } = c
+  const { fid } = frameData
 
   try {
     // Fetch the user's casts from Pinata
-    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}`);
-    const casts = response.data.data.casts;
+    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}`)
+    const casts = response.data.data.casts
 
     // Extract and process text from casts
-    let wordsArray = [];
-    const wordCounts = {};
+    const wordCounts = {}
+    let maxCount = 0
 
     casts.forEach((cast) => {
-      const words = cast.text.split(' ').filter((word) => {
-        const lowerCaseWord = word.toLowerCase();
-        return !stopwords.includes(lowerCaseWord) && !word.startsWith('http');
-      });
+      const words = cast.text.split(/\s+/).filter((word) => {
+        const lowerCaseWord = word.toLowerCase()
+        return !stopwords.includes(lowerCaseWord) && !word.startsWith('http') && word.length > 2
+      })
 
       words.forEach((word) => {
-        const lowerCaseWord = word.toLowerCase();
-        if (!wordCounts[lowerCaseWord]) {
-          wordCounts[lowerCaseWord] = 0;
-        }
-        wordCounts[lowerCaseWord]++;
-      });
-    });
+        const lowerCaseWord = word.toLowerCase()
+        wordCounts[lowerCaseWord] = (wordCounts[lowerCaseWord] || 0) + 1
+        maxCount = Math.max(maxCount, wordCounts[lowerCaseWord])
+      })
+    })
 
-    // Convert wordCounts to an array suitable for word cloud
-    for (const [word, count] of Object.entries(wordCounts)) {
-      wordsArray.push({ word, count });
-    }
-
-    // Generate the word cloud image
-    const wordCloudImage = await generateImageResponse(generateWordCloud(wordsArray));
+    // Convert wordCounts to an array and sort by count
+    const wordsArray = Object.entries(wordCounts)
+      .map(([word, count]) => ({ word, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50)  // Limit to top 50 words
 
     return c.res({
-      head: (
-        <Head>
-          <title>Word Cloud Result</title>
-          <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content={wordCloudImage} />
-        </Head>
+      image: (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#1a1a1a',
+            padding: '20px',
+          }}
+        >
+          {wordsArray.map(({ word, count }) => (
+            <div
+              key={word}
+              style={{
+                fontSize: `${getWordSize(count, maxCount)}px`,
+                color: getRandomDarkColor(),
+                margin: '5px',
+                fontWeight: 'bold',
+              }}
+            >
+              {word}
+            </div>
+          ))}
+        </div>
       ),
-      body: (
-        <>
-          <h1>Here’s Your Word Cloud</h1>
-          <img src={wordCloudImage} alt="Word Cloud" />
-          <p>Click below to share or analyze again.</p>
-        </>
-      ),
-    });
+      intents: [
+        <button action="/">Analyze Again</button>,
+        <button action={`https://warpcast.com/~/compose?text=Check out my Farcaster word cloud!%0A%0ACreated with Know Me Frame`}>Share</button>
+      ]
+    })
   } catch (error) {
-    console.error('Error in analyzeMe:', error);
-
-    // Generate an error image
-    const errorImage = await generateImageResponse(
-      <div
-        style={{
-          fontSize: '40px',
-          color: 'red',
-          textAlign: 'center',
-        }}
-      >
-        An error occurred while analyzing your casts. Please try again.
-      </div>
-    );
+    console.error('Error in analyzeMe:', error)
 
     return c.res({
-      head: (
-        <Head>
-          <title>Error</title>
-          <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content={errorImage} />
-        </Head>
+      image: (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#f0f0f0',
+            color: 'red',
+            fontSize: 32,
+            textAlign: 'center',
+            padding: '20px',
+          }}
+        >
+          An error occurred while analyzing your casts. Please try again.
+        </div>
       ),
-      body: (
-        <>
-          <h1>Error</h1>
-          <img src={errorImage} alt="Error" />
-          <p>An error occurred while analyzing your casts. Please try again.</p>
-        </>
-      ),
-    });
+      intents: [
+        <button action="/">Try Again</button>
+      ]
+    })
   }
-});
+})
 
-export default app;
+export default app

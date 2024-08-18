@@ -1,31 +1,40 @@
-import { Frog } from 'frog';
-import { neynar } from 'frog/hubs';
-import Head from 'next/head';
+import { Frog } from 'frog'
+
+export const config = {
+  runtime: 'edge',
+}
 
 export const app = new Frog({
-  hub: neynar({ apiKey: 'NEYNAR_FROG_FM' }),
-  title: 'Know Me Frame',
-  verify: 'silent',
-});
+  basePath: '/api',
+  initialState: {
+    count: 0,
+  },
+})
 
 app.frame('/', (c) => {
   return c.res({
-    head: (
-      <Head>
-        <title>Know Me Farcaster Frame</title>
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="/knowme.png" />
-        <meta property="fc:frame:button:1" content="Analyze Me" />
-        <meta property="fc:frame:post_url" content="/analyzeMe" />
-      </Head>
+    image: (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#f0f0f0',
+          fontSize: 40,
+          fontWeight: 'bold',
+        }}
+      >
+        <div>Know Me Frame</div>
+        <div style={{ fontSize: 24, marginTop: 20 }}>Analyze your Farcaster profile</div>
+      </div>
     ),
-    body: (
-      <>
-        <img src="/knowme.png" alt="Know Me" width="500" height="300" />
-        <p>Click the button below to analyze your Farcaster profile.</p>
-      </>
-    ),
-  });
-});
+    intents: [
+      <button action="/api/analyzeMe">Analyze Me</button>
+    ]
+  })
+})
 
-export default app;
+export default app
