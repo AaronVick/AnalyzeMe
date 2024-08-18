@@ -1,9 +1,7 @@
 import { Frog } from 'frog';
 import axios from 'axios';
 
-export const config = {
-  runtime: 'edge',
-};
+console.log('Starting analyzeMe.js execution');
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -116,7 +114,18 @@ app.frame('/analyzeMe', async (c) => {
   }
 });
 
-export default function handler(req) {
-  console.log('Received request:', req.method, req.url);
-  return app.handle(req);
+export default async function handler(req, res) {
+  console.log('API route handler called');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  return app.handle(req, res);
 }
+
+console.log('analyzeMe.js execution completed');
