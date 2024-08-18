@@ -1,20 +1,6 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "routes": [
-    {
-      "src": "/knowme.png",
-      "dest": "/knowme.png"
-    },
-    {
-      "src": "/api/analyzeMe",
-      "dest": "/api/analyzeMe"
-    },
     {
       "src": "/api/(.*)",
       "dest": "/api/$1"
