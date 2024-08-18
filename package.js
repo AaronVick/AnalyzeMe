@@ -1,24 +1,26 @@
 {
-  "name": "farcaster-frame-analyze-me",
-  "version": "1.0.0",
-  "description": "A Farcaster frame that analyzes user casts and generates a word cloud image.",
-  "main": "index.js",
+  "name": "analyze-me",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "axios": "^1.5.0",
     "frog": "^0.3.8",
-    "next": "^13.4.19",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "next": "13.5.4",
+    "react": "^18",
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "eslint": "8.47.0",
-    "eslint-config-next": "13.4.19"
-  },
-  "author": "AaronV",
-  "license": "MIT"
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "13.5.4",
+    "typescript": "^5"
+  }
 }

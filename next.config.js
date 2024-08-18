@@ -1,7 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
-}
+  images: {
+    domains: ['analyze-me.vercel.app'],
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline';",
+          },
+        ],
+      },
+    ];
+  },
+};
 
 module.exports = nextConfig;

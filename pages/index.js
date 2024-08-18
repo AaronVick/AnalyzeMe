@@ -14,6 +14,10 @@ export const app = new Frog({
 });
 
 app.frame('/', (c) => {
+  console.log('Rendering initial frame');
+  const imageUrl = `${basePath}/knowme.png`;
+  console.log('Image URL:', imageUrl);
+  
   return c.res({
     image: (
       <div
@@ -29,7 +33,7 @@ app.frame('/', (c) => {
           fontWeight: 'bold',
         }}
       >
-        <img src={`${basePath}/knowme.png`} alt="Know Me" style={{ maxWidth: '100%', maxHeight: '300px' }} />
+        <img src={imageUrl} alt="Know Me" style={{ maxWidth: '100%', maxHeight: '300px' }} />
         <div style={{ fontSize: 24, marginTop: 20 }}>Analyze your Farcaster profile</div>
       </div>
     ),
@@ -39,7 +43,7 @@ app.frame('/', (c) => {
   });
 });
 
-export default function handler(req, res) {
+export default function handler(req) {
   console.log('Received request:', req.method, req.url);
-  return app.handle(req, res);
+  return app.handle(req);
 }
