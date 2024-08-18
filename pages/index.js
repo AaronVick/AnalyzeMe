@@ -29,7 +29,7 @@ app.frame('/', (c) => {
           fontWeight: 'bold',
         }}
       >
-        <div>Know Me Frame</div>
+        <img src={`${basePath}/knowme.png`} alt="Know Me" style={{ maxWidth: '100%', maxHeight: '300px' }} />
         <div style={{ fontSize: 24, marginTop: 20 }}>Analyze your Farcaster profile</div>
       </div>
     ),
