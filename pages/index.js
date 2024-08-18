@@ -12,6 +12,7 @@ export const app = new Frog({
 })
 
 app.frame('/', (c) => {
+  console.log('Rendering initial frame')
   return c.res({
     image: (
       <div
@@ -37,4 +38,7 @@ app.frame('/', (c) => {
   })
 })
 
-export default app
+export default function handler(req, res) {
+  console.log('Received request:', req.method, req.url)
+  return app.handle(req, res)
+}

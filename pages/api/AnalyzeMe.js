@@ -27,19 +27,24 @@ const app = new Frog({
 })
 
 app.frame('/analyzeMe', async (c) => {
+  console.log('Received analyzeMe request')
   const { frameData } = c
   const { fid } = frameData
+  console.log('FID:', fid)
 
   try {
-    // Fetch the user's casts from Pinata
+    console.log('Fetching casts from Pinata')
     const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}`)
+    console.log('Pinata response status:', response.status)
     const casts = response.data.data.casts
+    console.log('Number of casts:', casts.length)
 
-    // Extract and process text from casts
     const wordCounts = {}
     let maxCount = 0
 
-    casts.forEach((cast) => {
+    console.log('Processing casts')
+    casts.forEach((cast, index) => {
+      console.log(`Processing cast ${index + 1}`)
       const words = cast.text.split(/\s+/).filter((word) => {
         const lowerCaseWord = word.toLowerCase()
         return !stopwords.includes(lowerCaseWord) && !word.startsWith('http') && word.length > 2
@@ -52,12 +57,13 @@ app.frame('/analyzeMe', async (c) => {
       })
     })
 
-    // Convert wordCounts to an array and sort by count
+    console.log('Sorting and limiting words')
     const wordsArray = Object.entries(wordCounts)
       .map(([word, count]) => ({ word, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 50)  // Limit to top 50 words
+      .slice(0, 50)
 
+    console.log('Generating word cloud image')
     return c.res({
       image: (
         <div
@@ -94,6 +100,7 @@ app.frame('/analyzeMe', async (c) => {
     })
   } catch (error) {
     console.error('Error in analyzeMe:', error)
+    console.error('Error stack:', error.stack)
 
     return c.res({
       image: (
@@ -121,4 +128,7 @@ app.frame('/analyzeMe', async (c) => {
   }
 })
 
-export default app
+export default function handler(req, res) {
+  console.log('Received request:', req.method, req.url)
+  return app.handle(req, res)
+}
