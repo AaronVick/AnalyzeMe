@@ -1,18 +1,19 @@
-import { Frog } from 'frog'
+import { Frog } from 'frog';
 
 export const config = {
   runtime: 'edge',
-}
+};
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 export const app = new Frog({
-  basePath: '/api',
+  basePath: `${basePath}/api`,
   initialState: {
     count: 0,
   },
-})
+});
 
 app.frame('/', (c) => {
-  console.log('Rendering initial frame')
   return c.res({
     image: (
       <div
@@ -33,12 +34,12 @@ app.frame('/', (c) => {
       </div>
     ),
     intents: [
-      <button action="/api/analyzeMe">Analyze Me</button>
+      <button action={`${basePath}/api/analyzeMe`}>Analyze Me</button>
     ]
-  })
-})
+  });
+});
 
 export default function handler(req, res) {
-  console.log('Received request:', req.method, req.url)
-  return app.handle(req, res)
+  console.log('Received request:', req.method, req.url);
+  return app.handle(req, res);
 }

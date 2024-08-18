@@ -1,69 +1,71 @@
-import { Frog } from 'frog'
-import axios from 'axios'
+import { Frog } from 'frog';
+import axios from 'axios';
 
 export const config = {
   runtime: 'edge',
-}
+};
 
 const stopwords = [
   'the', 'is', 'in', 'and', 'to', 'a', 'of', 'that', 'it', 'on', 'with', 'as', 'for', 'this', 'was', 'are', 'by', 'an', 'be', 'at', 'from',
-]
+];
 
 function getRandomDarkColor() {
-  const hue = Math.floor(Math.random() * 360)
-  const saturation = 50 + Math.random() * 30 // 50-80%
-  const lightness = 15 + Math.random() * 20 // 15-35%
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 50 + Math.random() * 30; // 50-80%
+  const lightness = 15 + Math.random() * 20; // 15-35%
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 function getWordSize(count, maxCount) {
-  const minSize = 20
-  const maxSize = 60
-  return minSize + (count / maxCount) * (maxSize - minSize)
+  const minSize = 20;
+  const maxSize = 60;
+  return minSize + (count / maxCount) * (maxSize - minSize);
 }
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const app = new Frog({
-  basePath: '/api',
-})
+  basePath: `${basePath}/api`,
+});
 
 app.frame('/analyzeMe', async (c) => {
-  console.log('Received analyzeMe request')
-  const { frameData } = c
-  const { fid } = frameData
-  console.log('FID:', fid)
+  console.log('Received analyzeMe request');
+  const { frameData } = c;
+  const { fid } = frameData;
+  console.log('FID:', fid);
 
   try {
-    console.log('Fetching casts from Pinata')
-    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}`)
-    console.log('Pinata response status:', response.status)
-    const casts = response.data.data.casts
-    console.log('Number of casts:', casts.length)
+    console.log('Fetching casts from Pinata');
+    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}`);
+    console.log('Pinata response status:', response.status);
+    const casts = response.data.data.casts;
+    console.log('Number of casts:', casts.length);
 
-    const wordCounts = {}
-    let maxCount = 0
+    const wordCounts = {};
+    let maxCount = 0;
 
-    console.log('Processing casts')
+    console.log('Processing casts');
     casts.forEach((cast, index) => {
-      console.log(`Processing cast ${index + 1}`)
+      console.log(`Processing cast ${index + 1}`);
       const words = cast.text.split(/\s+/).filter((word) => {
-        const lowerCaseWord = word.toLowerCase()
-        return !stopwords.includes(lowerCaseWord) && !word.startsWith('http') && word.length > 2
-      })
+        const lowerCaseWord = word.toLowerCase();
+        return !stopwords.includes(lowerCaseWord) && !word.startsWith('http') && word.length > 2;
+      });
 
       words.forEach((word) => {
-        const lowerCaseWord = word.toLowerCase()
-        wordCounts[lowerCaseWord] = (wordCounts[lowerCaseWord] || 0) + 1
-        maxCount = Math.max(maxCount, wordCounts[lowerCaseWord])
-      })
-    })
+        const lowerCaseWord = word.toLowerCase();
+        wordCounts[lowerCaseWord] = (wordCounts[lowerCaseWord] || 0) + 1;
+        maxCount = Math.max(maxCount, wordCounts[lowerCaseWord]);
+      });
+    });
 
-    console.log('Sorting and limiting words')
+    console.log('Sorting and limiting words');
     const wordsArray = Object.entries(wordCounts)
       .map(([word, count]) => ({ word, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 50)
+      .slice(0, 50);
 
-    console.log('Generating word cloud image')
+    console.log('Generating word cloud image');
     return c.res({
       image: (
         <div
@@ -94,13 +96,13 @@ app.frame('/analyzeMe', async (c) => {
         </div>
       ),
       intents: [
-        <button action="/">Analyze Again</button>,
+        <button action={`${basePath}/`}>Analyze Again</button>,
         <button action={`https://warpcast.com/~/compose?text=Check out my Farcaster word cloud!%0A%0ACreated with Know Me Frame`}>Share</button>
       ]
-    })
+    });
   } catch (error) {
-    console.error('Error in analyzeMe:', error)
-    console.error('Error stack:', error.stack)
+    console.error('Error in analyzeMe:', error);
+    console.error('Error stack:', error.stack);
 
     return c.res({
       image: (
@@ -122,13 +124,13 @@ app.frame('/analyzeMe', async (c) => {
         </div>
       ),
       intents: [
-        <button action="/">Try Again</button>
+        <button action={`${basePath}/`}>Try Again</button>
       ]
-    })
+    });
   }
-})
+});
 
 export default function handler(req, res) {
-  console.log('Received request:', req.method, req.url)
-  return app.handle(req, res)
+  console.log('Received request:', req.method, req.url);
+  return app.handle(req, res);
 }
