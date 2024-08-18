@@ -9,18 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@farcaster/core": "^0.11.2",
+    "@farcaster/hub-nodejs": "^0.10.13",
     "axios": "^1.5.0",
-    "frog": "^0.3.8",
+    "ethers": "^6.7.1",
     "next": "13.5.4",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
     "eslint": "^8",
-    "eslint-config-next": "13.5.4",
-    "typescript": "^5"
+    "eslint-config-next": "13.5.4"
   }
 }

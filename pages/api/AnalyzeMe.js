@@ -1,131 +1,82 @@
-import { Frog } from 'frog';
+import { getSSLHubRpcClient, Message } from '@farcaster/hub-nodejs';
+import { VerificationResult, validateMessage } from '@farcaster/core';
 import axios from 'axios';
 
-console.log('Starting analyzeMe.js execution');
-
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-
-const app = new Frog({
-  basePath: `${basePath}/api`,
-});
-
-function getRandomDarkColor() {
-  const hue = Math.floor(Math.random() * 360);
-  const saturation = 50 + Math.random() * 30;
-  const lightness = 15 + Math.random() * 20;
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
-
-function getWordSize(count, maxCount) {
-  const minSize = 20;
-  const maxSize = 60;
-  return minSize + (count / maxCount) * (maxSize - minSize);
-}
-
-app.frame('/analyzeMe', async (c) => {
-  console.log('Analyzing Farcaster profile');
-  const { frameData } = c;
-  const { fid } = frameData;
-
-  try {
-    console.log('Fetching casts for FID:', fid);
-    const response = await axios.get(`https://api.neynar.com/v1/farcaster/casts?fid=${fid}&limit=50`);
-    const casts = response.data.result.casts;
-    console.log('Fetched casts:', casts.length);
-
-    const wordCounts = {};
-    let maxCount = 0;
-
-    casts.forEach((cast) => {
-      const words = cast.text.split(/\s+/).filter(word => word.length > 2);
-      words.forEach((word) => {
-        const lowerCaseWord = word.toLowerCase();
-        wordCounts[lowerCaseWord] = (wordCounts[lowerCaseWord] || 0) + 1;
-        maxCount = Math.max(maxCount, wordCounts[lowerCaseWord]);
-      });
-    });
-
-    const wordsArray = Object.entries(wordCounts)
-      .map(([word, count]) => ({ word, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 50);
-
-    console.log('Generated word cloud data');
-
-    return c.res({
-      image: (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#1a1a1a',
-            padding: '20px',
-          }}
-        >
-          {wordsArray.map(({ word, count }) => (
-            <div
-              key={word}
-              style={{
-                fontSize: `${getWordSize(count, maxCount)}px`,
-                color: getRandomDarkColor(),
-                margin: '5px',
-                fontWeight: 'bold',
-              }}
-            >
-              {word}
-            </div>
-          ))}
-        </div>
-      ),
-      intents: [
-        <button action="/">Analyze Again</button>,
-        <button action={`https://warpcast.com/~/compose?text=Check out my Farcaster word cloud!%0A%0ACreated with Know Me Frame`}>Share</button>
-      ]
-    });
-  } catch (error) {
-    console.error('Error analyzing profile:', error);
-    return c.res({
-      image: (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#f0f0f0',
-            color: 'red',
-            fontSize: 32,
-            textAlign: 'center',
-            padding: '20px',
-          }}
-        >
-          An error occurred while analyzing your profile. Please try again.
-        </div>
-      ),
-      intents: [
-        <button action="/">Try Again</button>
-      ]
-    });
-  }
-});
+const HUB_URL = process.env.HUB_URL || 'nemes.farcaster.xyz:2283';
 
 export default async function handler(req, res) {
-  console.log('API route handler called');
-  console.log('Request method:', req.method);
-  console.log('Request URL:', req.url);
-  
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (req.method === 'POST') {
+    try {
+      const { trustedData, untrustedData } = req.body;
+      
+      // Parse and validate the frame message
+      const frameMessage = Message.fromJSON(JSON.parse(trustedData.messageBytes));
+      const result = await validateMessage(frameMessage);
+      
+      if (result !== VerificationResult.Valid) {
+        return res.status(400).json({ error: 'Invalid frame message' });
+      }
+
+      // Extract FID from the validated message
+      const fid = frameMessage.data.fid;
+
+      // Fetch user's casts
+      const response = await axios.get(`https://api.neynar.com/v1/farcaster/casts?fid=${fid}&limit=50`);
+      const casts = response.data.result.casts;
+
+      // Process casts and generate word cloud data
+      const wordCounts = {};
+      casts.forEach(cast => {
+        const words = cast.text.split(/\s+/).filter(word => word.length > 2);
+        words.forEach(word => {
+          const lowerCaseWord = word.toLowerCase();
+          wordCounts[lowerCaseWord] = (wordCounts[lowerCaseWord] || 0) + 1;
+        });
+      });
+
+      const wordsArray = Object.entries(wordCounts)
+        .map(([word, count]) => ({ word, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 50);
+
+      // Generate simple HTML for word cloud
+      const wordCloudHtml = wordsArray.map(({ word, count }) => 
+        `<span style="font-size: ${20 + count * 2}px; margin: 5px;">${word}</span>`
+      ).join('');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta property="fc:frame" content="vNext" />
+            <meta property="fc:frame:image" content="data:image/svg+xml,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
+                <rect width="100%" height="100%" fill="#1a1a1a"/>
+                <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle">
+                  ${wordCloudHtml}
+                </text>
+              </svg>
+            `)}" />
+            <meta property="fc:frame:button:1" content="Analyze Again" />
+            <meta property="fc:frame:button:2" content="Share" />
+            <meta property="fc:frame:button:2:action" content="link" />
+            <meta property="fc:frame:button:2:target" content="https://warpcast.com/~/compose?text=Check out my Farcaster word cloud!%0A%0ACreated with Know Me Frame" />
+          </head>
+          <body>
+            <h1>Your Farcaster Word Cloud</h1>
+            <div>${wordCloudHtml}</div>
+          </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.status(200).send(html);
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'An error occurred while analyzing the profile.' });
+    }
+  } else {
+    res.setHeader('Allow', ['POST']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
-  return app.handle(req, res);
 }
-
-console.log('analyzeMe.js execution completed');
