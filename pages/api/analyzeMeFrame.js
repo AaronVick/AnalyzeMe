@@ -1,11 +1,25 @@
 import { Message } from '@farcaster/core';
 import axios from 'axios';
 
+// Function to remove URLs from text
+function removeUrls(text) {
+  return text.replace(/https?:\/\/[^\s]+/g, '');
+}
+
+// List of common stop words
+const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
+'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with']);
+
 async function fetchUserCasts(fid) {
   console.log(`Attempting to fetch casts for FID: ${fid}`);
   try {
-    // Use the Pinata API to fetch casts
-    const response = await axios.get(`https://api.pinata.cloud/v3/farcaster/casts?fid=${fid}`);
+    const response = await axios.get(`https://api.pinata.cloud/v3/farcaster/casts?fid=${fid}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PINATA_API_SECRET}`,
+        'pinata_api_key': process.env.PINATA_API_KEY,
+        'pinata_secret_api_key': process.env.PINATA_API_SECRET
+      }
+    });
     if (response.data && response.data.casts) {
       return response.data.casts;
     } else {
@@ -20,7 +34,6 @@ async function fetchUserCasts(fid) {
 
 // Example of generating a word cloud using a different service or library
 async function generateWordCloudImage(wordsArray) {
-  // Replace with a cloud-based word cloud service API call if needed
   const wordCloudData = wordsArray.map(wordObj => `${wordObj.word}:${wordObj.count}`).join(',');
   const url = `https://api.wordcloudservice.com/generate?text=${encodeURIComponent(wordCloudData)}`;
   return url; // Return the URL of the generated word cloud
