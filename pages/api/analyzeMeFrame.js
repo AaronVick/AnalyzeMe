@@ -64,8 +64,8 @@ async function fetchUserCasts(fid) {
 }
 
 function generateWordCloudImage(wordsArray) {
-  const width = 800;
-  const height = 400;
+  const width = 1200; // Increased width for better resolution
+  const height = Math.round(width / 1.91); // Approximately 628 to maintain 1.91:1 ratio
   const words = wordsArray.slice(0, 30); // Limit to top 30 words for simplicity
 
   const randomVibrantColor = () => {
@@ -83,14 +83,14 @@ function generateWordCloudImage(wordsArray) {
   const placedWords = [];
 
   words.forEach((word, index) => {
-    const fontSize = Math.max(12, Math.min(80, 20 + (word.count / maxCount) * 60)); // Improved scaling
+    const fontSize = Math.max(16, Math.min(100, 24 + (word.count / maxCount) * 76)); // Adjusted scaling
     const color = randomVibrantColor();
 
     let placed = false;
     let attempts = 0;
-    while (!placed && attempts < 100) {
-      const x = Math.random() * (width - 100) + 50;
-      const y = Math.random() * (height - 20) + fontSize;
+    while (!placed && attempts < 200) { // Increased attempts
+      const x = Math.random() * (width - 200) + 100; // Adjusted to keep words more centered
+      const y = Math.random() * (height - 40) + fontSize;
 
       // Simple collision detection
       const overlap = placedWords.some(placedWord => 
@@ -99,7 +99,7 @@ function generateWordCloudImage(wordsArray) {
       );
 
       if (!overlap) {
-        svg += `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" font-weight="bold">${word.word}</text>`;
+        svg += `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" font-weight="bold" text-anchor="middle">${word.word}</text>`;
         placedWords.push({ x, y, width: word.word.length * fontSize * 0.6, height: fontSize }); // Approximate width
         placed = true;
       }
