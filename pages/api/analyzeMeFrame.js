@@ -159,10 +159,9 @@ export default async function handler(req, res) {
           <head>
             <meta property="fc:frame" content="vNext" />
             <meta property="fc:frame:image" content="${wordCloudImage}" />
-            <meta property="fc:frame:button:1" content="Analyze Again" />
-            <meta property="fc:frame:button:2" content="Share" />
-            <meta property="fc:frame:button:2:action" content="link" />
-            <meta property="fc:frame:button:2:target" content="https://warpcast.com/~/compose?text=Check out your current Farcaster word cloud!%0A%0AFrame by @aaronv%0A%0Ahttps://analyze-me.vercel.app/" />
+            <meta property="fc:frame:button:1" content="Share" />
+            <meta property="fc:frame:button:1:action" content="link" />
+            <meta property="fc:frame:button:1:target" content="https://warpcast.com/~/compose?text=Check out your current Farcaster word cloud!%0A%0AFrame by @aaronv%0A%0Ahttps://analyze-me.vercel.app/" />
           </head>
           <body>
             <h1>Your Farcaster Word Cloud</h1>
