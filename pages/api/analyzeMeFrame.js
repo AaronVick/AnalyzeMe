@@ -1,4 +1,4 @@
-import { FrameRequest, getFrameMessage, FrameValidationData, validateFrameMessage } from '@farcaster/core';
+import { FrameRequest, Message, FrameValidationData, validateFrameMessage } from '@farcaster/core';
 import axios from 'axios';
 import sharp from 'sharp';
 
@@ -40,9 +40,16 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       // Parse and validate the frame message
-      const body = req.body;
-      const frameMessage = await getFrameMessage(body);
+      const { trustedData } = req.body;
+      
+      if (!trustedData?.messageBytes) {
+        return res.status(400).json({ error: 'Invalid request: missing trusted data' });
+      }
 
+      // Decode the frame message
+      const frameMessage = Message.decode(Buffer.from(trustedData.messageBytes, 'hex'));
+
+      // Validate the frame message
       const validateResult = await validateFrameMessage(frameMessage);
 
       if (validateResult.isOk() && validateResult.value.valid) {
