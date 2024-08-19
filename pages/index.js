@@ -32,6 +32,7 @@ export default function Home() {
       </Head>
       <main>
         <h1>Analyze My Casts</h1>
+        <img src="https://analyze-me.vercel.app/knowme.png" alt="Analyze Me" style={{ maxWidth: '100%', height: 'auto' }} />
       </main>
     </div>
   );
