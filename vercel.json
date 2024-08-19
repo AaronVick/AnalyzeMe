@@ -8,8 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/api/analyzeMe",
-      "dest": "/api/analyzeMe"
+      "src": "/api/analyzeMeFrame",
+      "dest": "/api/analyzeMeFrame"
     },
     {
       "src": "/(.*)",
