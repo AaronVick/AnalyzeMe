@@ -39,21 +39,21 @@ function generateWordCloudImage(wordsArray) {
   const height = 400;
   const words = wordsArray.slice(0, 30); // Limit to top 30 words for simplicity
 
-  // Function to generate random pastel colors
-  const randomPastelColor = () => {
+  // Function to generate random vibrant colors
+  const randomVibrantColor = () => {
     const hue = Math.floor(Math.random() * 360);
-    return `hsl(${hue}, 70%, 80%)`;
+    return `hsl(${hue}, 100%, 70%)`; // More saturated and brighter colors
   };
 
   let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="#f0f0f0"/>`;
+    <rect width="100%" height="100%" fill="#000000"/>`;
 
   words.forEach((word, index) => {
     const fontSize = Math.max(12, Math.min(60, 10 + word.count * 5)); // Scale font size
     const x = Math.random() * (width - 100) + 50;
     const y = Math.random() * (height - 20) + fontSize;
-    const color = randomPastelColor();
-    svg += `<text x="${x}" y="${y}" font-family="Arial" font-size="${fontSize}" fill="${color}">${word.word}</text>`;
+    const color = randomVibrantColor();
+    svg += `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" font-weight="bold">${word.word}</text>`;
   });
 
   svg += '</svg>';
