@@ -4,12 +4,13 @@ const nextConfig = {
   images: {
     domains: ['analyze-me.vercel.app'],
   },
-  webpack: (config) => {
-    config.externals.push({
-      sharp: "commonjs sharp",
-    });
-    return config;
-  },
+  // Comment out the custom Webpack configuration for now
+  // webpack: (config) => {
+  //   config.externals.push({
+  //     sharp: "commonjs sharp",
+  //   });
+  //   return config;
+  // },
 }
 
-module.exports = nextConfig
+module.exports = nextConfig;
