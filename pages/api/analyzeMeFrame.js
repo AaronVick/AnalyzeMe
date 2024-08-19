@@ -1,4 +1,4 @@
-import { Message, FrameActionBody } from '@farcaster/core';
+import { Message } from '@farcaster/core';
 import axios from 'axios';
 import sharp from 'sharp';
 
@@ -14,7 +14,8 @@ const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for
 async function fetchUserCasts(fid) {
   console.log(`Attempting to fetch casts for FID: ${fid}`);
   try {
-    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}&limit=50`);
+    // Use a public Farcaster Hub instead of Neynar
+    const response = await axios.get(`https://nemes.farcaster.xyz/v1/casts?fid=${fid}&limit=50`);
     if (response.data && response.data.casts) {
       return response.data.casts;
     } else {
@@ -22,8 +23,8 @@ async function fetchUserCasts(fid) {
       return [];
     }
   } catch (error) {
-    console.error('Error fetching casts from Pinata:', error.message);
-    throw error;
+    console.error('Error fetching casts:', error.message);
+    return []; // Return an empty array instead of throwing an error
   }
 }
 
@@ -49,7 +50,6 @@ export default async function handler(req, res) {
       const frameMessage = Message.decode(Buffer.from(trustedData.messageBytes, 'hex'));
 
       // For now, we'll assume the message is valid if we can decode it
-      // In a production environment, you should implement proper validation
       const fid = frameMessage.data.fid;
       console.log('Received FID:', fid);
 
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
       // Process casts and generate word cloud
       const wordCounts = {};
       casts.forEach(cast => {
-        const cleanText = removeUrls(cast.text);
+        const cleanText = removeUrls(cast.text || '');
         const words = cleanText.split(/\s+/)
           .map(word => word.toLowerCase().replace(/[^a-z0-9]/g, ''))
           .filter(word => word.length > 2 && !stopWords.has(word));
