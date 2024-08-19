@@ -15,9 +15,7 @@ async function fetchUserCasts(fid) {
   try {
     const response = await axios.get(`https://api.pinata.cloud/v3/farcaster/casts?fid=${fid}`, {
       headers: {
-        'Authorization': `Bearer ${process.env.PINATA_API_SECRET}`,
-        'pinata_api_key': process.env.PINATA_API_KEY,
-        'pinata_secret_api_key': process.env.PINATA_API_SECRET
+        'Authorization': `Bearer ${process.env.PINATA_JWT}`,
       }
     });
     if (response.data && response.data.casts) {
@@ -28,20 +26,36 @@ async function fetchUserCasts(fid) {
     }
   } catch (error) {
     console.error('Error fetching casts from Pinata:', error.message);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
     return []; // Return an empty array instead of throwing an error
   }
 }
 
-// Example of generating a word cloud using a different service or library
-async function generateWordCloudImage(wordsArray) {
-  const wordCloudData = wordsArray.map(wordObj => `${wordObj.word}:${wordObj.count}`).join(',');
-  const url = `https://api.wordcloudservice.com/generate?text=${encodeURIComponent(wordCloudData)}`;
-  return url; // Return the URL of the generated word cloud
+function generateWordCloudImage(wordsArray) {
+  const width = 800;
+  const height = 400;
+  const words = wordsArray.slice(0, 30); // Limit to top 30 words for simplicity
+
+  let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#f0f0f0"/>`;
+
+  words.forEach((word, index) => {
+    const fontSize = Math.max(12, Math.min(60, 10 + word.count * 5)); // Scale font size
+    const x = Math.random() * (width - 100) + 50;
+    const y = Math.random() * (height - 20) + fontSize;
+    svg += `<text x="${x}" y="${y}" font-family="Arial" font-size="${fontSize}" fill="#333">${word.word}</text>`;
+  });
+
+  svg += '</svg>';
+
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 export default async function handler(req, res) {
   console.log('Received request method:', req.method);
-  console.log('Received headers:', JSON.stringify(req.headers, null, 2));
 
   if (req.method === 'POST') {
     try {
@@ -58,9 +72,13 @@ export default async function handler(req, res) {
       const casts = await fetchUserCasts(fid);
       console.log('Number of casts fetched:', casts.length);
 
+      if (casts.length === 0) {
+        return res.status(404).json({ error: 'No casts found for this user' });
+      }
+
       const wordCounts = {};
       casts.forEach(cast => {
-        const cleanText = cast.text.replace(/https?:\/\/[^\s]+/g, '');
+        const cleanText = removeUrls(cast.text || '');
         const words = cleanText.split(/\s+/)
           .map(word => word.toLowerCase().replace(/[^a-z0-9]/g, ''))
           .filter(word => word.length > 2 && !stopWords.has(word));
@@ -75,7 +93,7 @@ export default async function handler(req, res) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 50);
 
-      const wordCloudImage = await generateWordCloudImage(wordsArray);
+      const wordCloudImage = generateWordCloudImage(wordsArray);
       
       const html = `
         <!DOCTYPE html>
