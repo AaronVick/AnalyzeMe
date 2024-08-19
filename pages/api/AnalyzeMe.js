@@ -1,6 +1,7 @@
 import axios from 'axios';
 import sharp from 'sharp';
 
+// Function to fetch user casts from Pinata API
 async function fetchUserCasts(fid) {
   try {
     const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}&limit=50`);
@@ -11,6 +12,7 @@ async function fetchUserCasts(fid) {
   }
 }
 
+// Function to generate word cloud image
 async function generateWordCloudImage(wordsArray) {
   const svg = `
     <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
@@ -36,21 +38,17 @@ async function generateWordCloudImage(wordsArray) {
   return `data:image/png;base64,${png.toString('base64')}`;
 }
 
+// Main handler function for the API endpoint
 export default async function handler(req, res) {
   console.log('Received request:', req.method);
-  console.log('Request body:', req.body);
 
   if (req.method === 'POST') {
     try {
       const { untrustedData } = req.body;
-      console.log('Untrusted data:', untrustedData);
-
       const fid = untrustedData.fid;
-      console.log('FID:', fid);
 
       // Fetch user's casts
       const casts = await fetchUserCasts(fid);
-      console.log('Fetched casts:', casts.length);
 
       // Process casts and generate word cloud data
       const wordCounts = {};
@@ -67,11 +65,10 @@ export default async function handler(req, res) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 50);
 
-      console.log('Generated word cloud data');
-
+      // Generate word cloud image
       const wordCloudImage = await generateWordCloudImage(wordsArray);
-      console.log('Generated word cloud image');
 
+      // Construct HTML response
       const html = `
         <!DOCTYPE html>
         <html>
@@ -90,7 +87,7 @@ export default async function handler(req, res) {
         </html>
       `;
 
-      console.log('Sending response');
+      // Send the HTML response
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(html);
     } catch (error) {
@@ -98,7 +95,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'An error occurred while analyzing the profile.' });
     }
   } else {
-    console.log('Method not allowed:', req.method);
+    // Method not allowed for other HTTP methods
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
