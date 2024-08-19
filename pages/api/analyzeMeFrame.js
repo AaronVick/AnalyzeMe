@@ -1,6 +1,8 @@
 import { Message } from '@farcaster/core';
 import axios from 'axios';
 import sharp from 'sharp';
+import { createCanvas } from 'canvas';
+import cloud from 'd3-cloud';
 
 // Function to remove URLs from text
 function removeUrls(text) {
@@ -14,8 +16,8 @@ const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for
 async function fetchUserCasts(fid) {
   console.log(`Attempting to fetch casts for FID: ${fid}`);
   try {
-    // Use a public Farcaster Hub instead of Neynar
-    const response = await axios.get(`https://nemes.farcaster.xyz/v1/casts?fid=${fid}&limit=50`);
+    // Use the Pinata API to fetch casts
+    const response = await axios.get(`https://api.pinata.cloud/v3/farcaster/casts?fid=${fid}`);
     if (response.data && response.data.casts) {
       return response.data.casts;
     } else {
@@ -23,15 +25,36 @@ async function fetchUserCasts(fid) {
       return [];
     }
   } catch (error) {
-    console.error('Error fetching casts:', error.message);
+    console.error('Error fetching casts from Pinata:', error.message);
     return []; // Return an empty array instead of throwing an error
   }
 }
 
 async function generateWordCloudImage(wordsArray) {
-  // Implement your word cloud generation logic here
-  // For now, we'll return a placeholder image
-  return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
+  return new Promise((resolve, reject) => {
+    const canvas = createCanvas(800, 400);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 800, 400);
+
+    const layout = cloud()
+      .size([800, 400])
+      .words(wordsArray.map(d => ({ text: d.word, size: Math.sqrt(d.count) * 10 })))
+      .padding(5)
+      .rotate(() => (~~(Math.random() * 2) * 90))
+      .font("Impact")
+      .fontSize(d => d.size)
+      .on("end", words => {
+        ctx.fillStyle = "#000000";
+        words.forEach(word => {
+          ctx.font = `${word.size}px ${word.font}`;
+          ctx.fillText(word.text, word.x + 400, word.y + 200);
+        });
+        resolve(canvas.toDataURL("image/png"));
+      });
+
+    layout.start();
+  });
 }
 
 export default async function handler(req, res) {
