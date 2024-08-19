@@ -5,57 +5,7 @@ import { getSSLHubRpcClient, Message, FrameActionBody } from '@farcaster/core';
 const HUB_URL = process.env.HUB_URL || 'nemes.farcaster.xyz:2283';
 const client = getSSLHubRpcClient(HUB_URL);
 
-// List of common stop words
-const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
-'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with']);
-
-// Function to remove URLs from text
-function removeUrls(text) {
-  return text.replace(/https?:\/\/[^\s]+/g, '');
-}
-
-async function verifyFrame(trustedData) {
-  try {
-    const frameMessage = Message.decode(Buffer.from(trustedData.messageBytes, 'hex'));
-    const result = await client.validateMessage(frameMessage);
-    if (!result.isOk() || !result.value.valid) {
-      throw new Error('Invalid frame message');
-    }
-    
-    const frameActionBody = FrameActionBody.decode(frameMessage.data.frameActionBody);
-    return {
-      fid: frameMessage.data.fid,
-      buttonIndex: frameActionBody.buttonIndex,
-      castId: {
-        fid: frameActionBody.castId.fid,
-        hash: Buffer.from(frameActionBody.castId.hash).toString('hex')
-      }
-    };
-  } catch (error) {
-    console.error('Frame verification failed:', error);
-    throw new Error('Failed to verify frame message');
-  }
-}
-
-async function fetchUserCasts(fid) {
-  console.log(`Attempting to fetch casts for FID: ${fid}`);
-  try {
-    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}&limit=50`);
-    if (response.data && response.data.casts) {
-      return response.data.casts;
-    } else {
-      console.error('No casts found in the response');
-      return [];
-    }
-  } catch (error) {
-    console.error('Error fetching casts from Pinata:', error.message);
-    throw error;
-  }
-}
-
-async function generateWordCloudImage(wordsArray) {
-  // ... (keep the existing generateWordCloudImage function)
-}
+// Keep your helper functions (removeUrls, stopWords, verifyFrame, fetchUserCasts, generateWordCloudImage) here
 
 export default async function handler(req, res) {
   console.log('Received request:', req.method);
@@ -63,7 +13,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const { trustedData, untrustedData } = req.body;
+      const body = req.body;
+      console.log('Request Body:', JSON.stringify(body, null, 2));
+
+      const { trustedData, untrustedData } = body;
       
       if (!trustedData?.messageBytes) {
         return res.status(400).json({ error: 'Invalid request: missing trusted data' });
