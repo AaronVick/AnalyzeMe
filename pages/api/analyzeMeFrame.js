@@ -1,17 +1,5 @@
 import { Message } from '@farcaster/core';
 import axios from 'axios';
-import sharp from 'sharp';
-import { createCanvas } from 'canvas';
-import cloud from 'd3-cloud';
-
-// Function to remove URLs from text
-function removeUrls(text) {
-  return text.replace(/https?:\/\/[^\s]+/g, '');
-}
-
-// List of common stop words
-const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it',
-'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with']);
 
 async function fetchUserCasts(fid) {
   console.log(`Attempting to fetch casts for FID: ${fid}`);
@@ -30,31 +18,12 @@ async function fetchUserCasts(fid) {
   }
 }
 
+// Example of generating a word cloud using a different service or library
 async function generateWordCloudImage(wordsArray) {
-  return new Promise((resolve, reject) => {
-    const canvas = createCanvas(800, 400);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 800, 400);
-
-    const layout = cloud()
-      .size([800, 400])
-      .words(wordsArray.map(d => ({ text: d.word, size: Math.sqrt(d.count) * 10 })))
-      .padding(5)
-      .rotate(() => (~~(Math.random() * 2) * 90))
-      .font("Impact")
-      .fontSize(d => d.size)
-      .on("end", words => {
-        ctx.fillStyle = "#000000";
-        words.forEach(word => {
-          ctx.font = `${word.size}px ${word.font}`;
-          ctx.fillText(word.text, word.x + 400, word.y + 200);
-        });
-        resolve(canvas.toDataURL("image/png"));
-      });
-
-    layout.start();
-  });
+  // Replace with a cloud-based word cloud service API call if needed
+  const wordCloudData = wordsArray.map(wordObj => `${wordObj.word}:${wordObj.count}`).join(',');
+  const url = `https://api.wordcloudservice.com/generate?text=${encodeURIComponent(wordCloudData)}`;
+  return url; // Return the URL of the generated word cloud
 }
 
 export default async function handler(req, res) {
@@ -63,27 +32,22 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const { trustedData, untrustedData } = req.body;
+      const { trustedData } = req.body;
       
       if (!trustedData?.messageBytes) {
         return res.status(400).json({ error: 'Invalid request: missing trusted data' });
       }
 
-      // Decode the frame message
       const frameMessage = Message.decode(Buffer.from(trustedData.messageBytes, 'hex'));
-
-      // For now, we'll assume the message is valid if we can decode it
       const fid = frameMessage.data.fid;
       console.log('Received FID:', fid);
 
-      // Fetch user's casts
       const casts = await fetchUserCasts(fid);
       console.log('Number of casts fetched:', casts.length);
 
-      // Process casts and generate word cloud
       const wordCounts = {};
       casts.forEach(cast => {
-        const cleanText = removeUrls(cast.text || '');
+        const cleanText = cast.text.replace(/https?:\/\/[^\s]+/g, '');
         const words = cleanText.split(/\s+/)
           .map(word => word.toLowerCase().replace(/[^a-z0-9]/g, ''))
           .filter(word => word.length > 2 && !stopWords.has(word));
@@ -98,10 +62,8 @@ export default async function handler(req, res) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 50);
 
-      // Generate word cloud image
       const wordCloudImage = await generateWordCloudImage(wordsArray);
       
-      // Construct HTML response
       const html = `
         <!DOCTYPE html>
         <html>
