@@ -1,20 +1,13 @@
 import axios from 'axios';
-import { ethers } from 'ethers';
-import satori from 'satori';
 import sharp from 'sharp';
 
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
-
-async function verifyFrameMessage(trustedData) {
+async function fetchUserCasts(fid) {
   try {
-    const response = await axios.post('https://api.neynar.com/v2/farcaster/frame/validate', 
-      { trusted_data: trustedData },
-      { headers: { 'api_key': NEYNAR_API_KEY } }
-    );
-    return response.data.valid;
+    const response = await axios.get(`https://hub.pinata.cloud/v1/casts?fid=${fid}&limit=50`);
+    return response.data.data.casts;
   } catch (error) {
-    console.error('Error verifying frame message:', error);
-    return false;
+    console.error('Error fetching casts:', error);
+    throw error;
   }
 }
 
@@ -44,22 +37,20 @@ async function generateWordCloudImage(wordsArray) {
 }
 
 export default async function handler(req, res) {
+  console.log('Received request:', req.method);
+  console.log('Request body:', req.body);
+
   if (req.method === 'POST') {
     try {
-      const { trustedData, untrustedData } = req.body;
-      
-      const isValid = await verifyFrameMessage(trustedData);
-      if (!isValid) {
-        return res.status(400).json({ error: 'Invalid frame message' });
-      }
+      const { untrustedData } = req.body;
+      console.log('Untrusted data:', untrustedData);
 
-      const fid = trustedData.fid;
+      const fid = untrustedData.fid;
+      console.log('FID:', fid);
 
       // Fetch user's casts
-      const response = await axios.get(`https://api.neynar.com/v1/farcaster/casts?fid=${fid}&limit=50`, {
-        headers: { 'api_key': NEYNAR_API_KEY }
-      });
-      const casts = response.data.result.casts;
+      const casts = await fetchUserCasts(fid);
+      console.log('Fetched casts:', casts.length);
 
       // Process casts and generate word cloud data
       const wordCounts = {};
@@ -76,7 +67,10 @@ export default async function handler(req, res) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 50);
 
+      console.log('Generated word cloud data');
+
       const wordCloudImage = await generateWordCloudImage(wordsArray);
+      console.log('Generated word cloud image');
 
       const html = `
         <!DOCTYPE html>
@@ -96,14 +90,16 @@ export default async function handler(req, res) {
         </html>
       `;
 
+      console.log('Sending response');
       res.setHeader('Content-Type', 'text/html');
-      res.status(200).send(html);
+      return res.status(200).send(html);
     } catch (error) {
       console.error('Error:', error);
-      res.status(500).json({ error: 'An error occurred while analyzing the profile.' });
+      return res.status(500).json({ error: 'An error occurred while analyzing the profile.' });
     }
   } else {
+    console.log('Method not allowed:', req.method);
     res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 }
