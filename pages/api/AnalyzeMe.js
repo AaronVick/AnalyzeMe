@@ -1,27 +1,64 @@
-import { getSSLHubRpcClient, Message } from '@farcaster/hub-nodejs';
-import { VerificationResult, validateMessage } from '@farcaster/core';
 import axios from 'axios';
+import { ethers } from 'ethers';
+import satori from 'satori';
+import sharp from 'sharp';
 
-const HUB_URL = process.env.HUB_URL || 'nemes.farcaster.xyz:2283';
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+
+async function verifyFrameMessage(trustedData) {
+  try {
+    const response = await axios.post('https://api.neynar.com/v2/farcaster/frame/validate', 
+      { trusted_data: trustedData },
+      { headers: { 'api_key': NEYNAR_API_KEY } }
+    );
+    return response.data.valid;
+  } catch (error) {
+    console.error('Error verifying frame message:', error);
+    return false;
+  }
+}
+
+async function generateWordCloudImage(wordsArray) {
+  const svg = `
+    <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#1a1a1a"/>
+      ${wordsArray.map(({ word, count }, index) => `
+        <text
+          x="${600 + Math.cos(index) * 300}"
+          y="${315 + Math.sin(index) * 150}"
+          font-size="${20 + count * 2}"
+          fill="white"
+          text-anchor="middle"
+          dominant-baseline="middle"
+        >${word}</text>
+      `).join('')}
+    </svg>
+  `;
+
+  const png = await sharp(Buffer.from(svg))
+    .resize(1200, 630)
+    .png()
+    .toBuffer();
+
+  return `data:image/png;base64,${png.toString('base64')}`;
+}
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const { trustedData, untrustedData } = req.body;
       
-      // Parse and validate the frame message
-      const frameMessage = Message.fromJSON(JSON.parse(trustedData.messageBytes));
-      const result = await validateMessage(frameMessage);
-      
-      if (result !== VerificationResult.Valid) {
+      const isValid = await verifyFrameMessage(trustedData);
+      if (!isValid) {
         return res.status(400).json({ error: 'Invalid frame message' });
       }
 
-      // Extract FID from the validated message
-      const fid = frameMessage.data.fid;
+      const fid = trustedData.fid;
 
       // Fetch user's casts
-      const response = await axios.get(`https://api.neynar.com/v1/farcaster/casts?fid=${fid}&limit=50`);
+      const response = await axios.get(`https://api.neynar.com/v1/farcaster/casts?fid=${fid}&limit=50`, {
+        headers: { 'api_key': NEYNAR_API_KEY }
+      });
       const casts = response.data.result.casts;
 
       // Process casts and generate word cloud data
@@ -39,24 +76,14 @@ export default async function handler(req, res) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 50);
 
-      // Generate simple HTML for word cloud
-      const wordCloudHtml = wordsArray.map(({ word, count }) => 
-        `<span style="font-size: ${20 + count * 2}px; margin: 5px;">${word}</span>`
-      ).join('');
+      const wordCloudImage = await generateWordCloudImage(wordsArray);
 
       const html = `
         <!DOCTYPE html>
         <html>
           <head>
             <meta property="fc:frame" content="vNext" />
-            <meta property="fc:frame:image" content="data:image/svg+xml,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
-                <rect width="100%" height="100%" fill="#1a1a1a"/>
-                <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle">
-                  ${wordCloudHtml}
-                </text>
-              </svg>
-            `)}" />
+            <meta property="fc:frame:image" content="${wordCloudImage}" />
             <meta property="fc:frame:button:1" content="Analyze Again" />
             <meta property="fc:frame:button:2" content="Share" />
             <meta property="fc:frame:button:2:action" content="link" />
@@ -64,7 +91,7 @@ export default async function handler(req, res) {
           </head>
           <body>
             <h1>Your Farcaster Word Cloud</h1>
-            <div>${wordCloudHtml}</div>
+            <img src="${wordCloudImage}" alt="Word Cloud" />
           </body>
         </html>
       `;
